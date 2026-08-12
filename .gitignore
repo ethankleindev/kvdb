@@ -1,0 +1,14 @@
+# Compiled executable and object files
+hello
+*.o
+*.out
+
+# Data files our database will generate later
+
+*.db
+#.log
+data/
+
+# Editor and OS noise
+.vscode/
+*.swp
