@@ -1,5 +1,5 @@
 # Compiled executable and object files
-hello
+database
 *.o
 *.out
 
