@@ -4,6 +4,9 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <cstdint>
+#include <optional>
+#include <iostream>
 
 
 class Database
@@ -16,7 +19,7 @@ public:
     Database(const std::string&);
     ~Database();
     void put(const std::string&, const std::string&);
-    std::string get(const std::string&);
+    std::optional<std::string> get(const std::string&);
     void erase(const std::string&);
 };
 
