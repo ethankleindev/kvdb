@@ -60,5 +60,13 @@ std::optional<std::string> Database::get(const std::string& key)
 
  void Database::erase(const std::string& key)
  {
+    fileStream.seekp(0, std::ios::end);
+    
+    uint16_t keySize = key.size();
+    fileStream.write(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+    fileStream.write(key.data(), key.size());
 
+    int32_t tombstone = -1;
+    fileStream.write(reinterpret_cast<char*>(&tombstone), sizeof(tombstone));
+    data.erase(key);
  }

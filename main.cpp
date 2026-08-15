@@ -24,6 +24,19 @@ int main()
     {
         std::cout << "key not found\n";
     }
+    
+    db.erase("cat");
+    
+    catTest = db.get("cat");
+    if (catTest.has_value())
+    {
+        std::cout << *catTest << '\n';
+    }
+    else
+    {
+        std::cout << "key not found\n";
+    }
+    
 
     return 0;
 }
