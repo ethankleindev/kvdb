@@ -16,7 +16,7 @@ Database::Database(const std::string& filename)
 }
 Database::~Database()
 {
-
+    fileStream.close();
 }
 void Database::put(const std::string& key, const std::string& value)
 {
