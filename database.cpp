@@ -5,7 +5,8 @@
 
 Database::Database(const std::string& filename)
 {
-   fileStream.open(filename, std::ios::in | std::ios::out | std::ios::binary);
+    // file open
+    fileStream.open(filename, std::ios::in | std::ios::out | std::ios::binary);
     if(!fileStream.is_open())
     {
         fileStream.clear();
@@ -13,7 +14,38 @@ Database::Database(const std::string& filename)
         fileStream.close();
         fileStream.open(filename, std::ios::in | std::ios::out | std::ios::binary);
     }
+
+    // Index rebuild
+    fileStream.seekg(0, std::ios::beg);
+    uint16_t keySize = 0;
+    int32_t valueSize = 0;
+    std::streamoff currentOffset = 0;
+
+    while (true)
+    {
+        currentOffset = fileStream.tellg();
+        fileStream.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+        if (fileStream.fail())
+        {
+            break;
+        }
+        std::string key(keySize, '\0');
+        fileStream.read(key.data(), keySize);   
+
+        fileStream.read(reinterpret_cast<char*>(&valueSize), sizeof(valueSize));
+        if (valueSize == -1)
+        {
+            data.erase(key);
+        }
+        if (valueSize != -1)
+        {
+            data[key] = currentOffset;
+            fileStream.seekg(valueSize, std::ios::cur);
+        }
+    }
+    fileStream.clear();
 }
+
 Database::~Database()
 {
     fileStream.close();
