@@ -1,18 +1,20 @@
 #include "database.h"
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 
 
-Database::Database(const std::string& filename)
+Database::Database(const std::string& fname)
 {
     // file open
-    fileStream.open(filename, std::ios::in | std::ios::out | std::ios::binary);
+    fileName = fname;
+    fileStream.open(fname, std::ios::in | std::ios::out | std::ios::binary);
     if(!fileStream.is_open())
     {
         fileStream.clear();
-        fileStream.open(filename, std::ios::out | std::ios::binary);
+        fileStream.open(fname, std::ios::out | std::ios::binary);
         fileStream.close();
-        fileStream.open(filename, std::ios::in | std::ios::out | std::ios::binary);
+        fileStream.open(fname, std::ios::in | std::ios::out | std::ios::binary);
     }
 
     // Index rebuild
@@ -35,11 +37,11 @@ Database::Database(const std::string& filename)
         fileStream.read(reinterpret_cast<char*>(&valueSize), sizeof(valueSize));
         if (valueSize == -1)
         {
-            data.erase(key);
+            index.erase(key);
         }
         if (valueSize != -1)
         {
-            data[key] = currentOffset;
+            index[key] = currentOffset;
             fileStream.seekg(valueSize, std::ios::cur);
         }
     }
@@ -62,13 +64,13 @@ void Database::put(const std::string& key, const std::string& value)
     int32_t valueSize = value.size();
     fileStream.write(reinterpret_cast<char*>(&valueSize), sizeof(valueSize));
     fileStream.write(value.data(), value.size());
-    data[key] = nextOffset;
+    index[key] = nextOffset;
 }
 
 std::optional<std::string> Database::get(const std::string& key)
 {
-    auto iter = data.find(key);
-    if (iter == data.end())
+    auto iter = index.find(key);
+    if (iter == index.end())
     {
         return std::nullopt;
     }
@@ -100,5 +102,45 @@ std::optional<std::string> Database::get(const std::string& key)
 
     int32_t tombstone = -1;
     fileStream.write(reinterpret_cast<char*>(&tombstone), sizeof(tombstone));
-    data.erase(key);
+    index.erase(key);
+ }
+
+ void Database::compact()
+ {
+    std::fstream tempFileStream;
+    std::string tempFileName = fileName + ".tmp";
+    std::streamoff tempOffset = 0;
+    std::map<std::string, std::streamoff> tempIndex;
+    
+    tempFileStream.open(tempFileName, std::ios::out | std::ios::binary);
+    auto iter = index.begin();
+    while (iter != index.end())
+    {
+        fileStream.seekg(iter->second, std::ios::beg);
+        uint16_t keySize = 0;
+        fileStream.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+        fileStream.seekg(keySize, std::ios::cur);
+        
+        int32_t valueSize = 0;
+        fileStream.read(reinterpret_cast<char*>(&valueSize), sizeof(valueSize));
+        std::string value(valueSize, '\0');
+        fileStream.read(value.data(), valueSize);
+        tempOffset = tempFileStream.tellp();
+        std::cout << "compact: " << iter->first << " -> " << tempOffset << '\n';
+
+        tempFileStream.write(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+        tempFileStream.write(iter->first.data(), iter->first.size());
+        tempFileStream.write(reinterpret_cast<char*>(&valueSize), sizeof(valueSize));
+        tempFileStream.write(value.data(), value.size());
+        tempIndex[iter->first] = tempOffset;
+        ++iter;
+    }
+
+    tempFileStream.close();
+    fileStream.close();
+    std::filesystem::remove(fileName);
+    std::filesystem::rename(tempFileName,fileName);
+    fileStream.open(fileName, std::ios::in | std::ios::out | std::ios::binary);
+    index = tempIndex;
+    std::cout << "index size after compact: " << index.size() << '\n';
  }

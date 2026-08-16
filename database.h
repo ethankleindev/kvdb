@@ -4,15 +4,15 @@
 #include <map>
 #include <string>
 #include <fstream>
-#include <cstdint>
 #include <optional>
-#include <iostream>
+
 
 
 class Database
 {
 private:
-    std::map<std::string, std::streamoff> data;
+    std::string fileName;
+    std::map<std::string, std::streamoff> index;
     std::streamoff nextOffset;
     std::fstream fileStream;
 public:
@@ -21,6 +21,7 @@ public:
     void put(const std::string&, const std::string&);
     std::optional<std::string> get(const std::string&);
     void erase(const std::string&);
+    void compact();
 };
 
 #endif
